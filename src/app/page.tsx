@@ -195,7 +195,8 @@ export default function Home() {
               <option value="study">📚 学习类</option>
             </select>
             
-            <button 
+            <button
+              type="button"
               onClick={handleSubmit}
               disabled={isLoading || !content.trim()}
               className="flex-1 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
@@ -210,6 +211,7 @@ export default function Home() {
           <div className="flex gap-2 overflow-x-auto pb-2">
             {categories.map(cat => (
               <button
+                type="button"
                 key={cat.value}
                 onClick={() => setActiveFilter(cat.value as Category)}
                 className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
@@ -256,6 +258,7 @@ export default function Home() {
                     </span>
                     
                     <button 
+                      type="button"
                       onClick={() => handleUpvote(item.id)}
                       disabled={isUpvoted || isUpvoting}
                       className={`px-4 py-1 rounded-full transition-all ${
