@@ -3,16 +3,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { getUserFingerprint } from '@/lib/userFingerprint'
-
-// 定义类型
-interface Annoyance {
-  id: number
-  content: string
-  category: string
-  upvote_count: number
-  created_at: string
-  user_fingerprint: string
-}
+import LoadingSkeleton from '@/components/LoadingSkeleton'
+import EmptyState from '@/components/EmptyState'
+import AnnoyanceCard, { Annoyance } from '@/components/AnnoyanceCard'
 
 type Category = 'all' | 'tool' | 'life' | 'work' | 'study'
 
@@ -21,11 +14,11 @@ export default function Home() {
   const [category, setCategory] = useState('tool')
   const [annoyances, setAnnoyances] = useState<Annoyance[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isFirstLoading, setIsFirstLoading] = useState(true)  // ← 新增：首次加载
   const [myUpvotes, setMyUpvotes] = useState<Set<number>>(new Set())
   const [upvoting, setUpvoting] = useState<number | null>(null)
-  const [activeFilter, setActiveFilter] = useState<Category>('all') // ⭐ 新增：当前筛选
+  const [activeFilter, setActiveFilter] = useState<Category>('all')
 
-  // 加载列表
   useEffect(() => {
     loadAnnoyances()
     loadMyUpvotes()
@@ -42,6 +35,8 @@ export default function Home() {
       setAnnoyances(data || [])
     } catch (error) {
       console.error('加载失败:', error)
+    } finally {
+      setIsFirstLoading(false)  // ← 首次加载完成
     }
   }
 
@@ -82,6 +77,9 @@ export default function Home() {
       
       setContent('')
       await loadAnnoyances()
+      
+      // 提交成功提示（可选）
+      alert('✅ 发布成功！')
     } catch (error) {
       console.error('提交失败:', error)
       alert('提交失败，请重试')
@@ -109,7 +107,6 @@ export default function Home() {
 
       if (upvoteError) {
         if (upvoteError.code === '23505') {
-          console.log('已经点过赞了')
           setMyUpvotes(prev => new Set([...prev, annoyanceId]))
           return
         }
@@ -147,18 +144,16 @@ export default function Home() {
     }
   }
 
-  // ⭐ 新增：筛选逻辑
   const filteredAnnoyances = activeFilter === 'all' 
     ? annoyances 
     : annoyances.filter(item => item.category === activeFilter)
 
-  // ⭐ 新增：分类配置
   const categories = [
-    { value: 'all', label: '🌟 全部', emoji: '🌟' },
-    { value: 'tool', label: '🔧 工具类', emoji: '🔧' },
-    { value: 'life', label: '🏠 生活类', emoji: '🏠' },
-    { value: 'work', label: '💼 工作类', emoji: '💼' },
-    { value: 'study', label: '📚 学习类', emoji: '📚' },
+    { value: 'all', label: '🌟 全部' },
+    { value: 'tool', label: '🔧 工具类' },
+    { value: 'life', label: '🏠 生活类' },
+    { value: 'work', label: '💼 工作类' },
+    { value: 'study', label: '📚 学习类' },
   ] as const
 
   return (
@@ -166,23 +161,23 @@ export default function Home() {
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         {/* 头部 */}
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold mb-2">😤 不爽榜</h1>
-          <p className="text-gray-600">记录不爽，发现机会</p>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2">😤 不爽榜</h1>
+          <p className="text-gray-600 text-sm sm:text-base">记录不爽，发现机会</p>
         </div>
 
         {/* 输入区域 */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-8">
           <textarea 
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="什么让你不爽？(按Enter提交)"
+            placeholder="什么让你不爽？(按Enter提交，Shift+Enter换行)"
             aria-label="输入不爽内容"
             className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={3}
           />
           
-          <div className="flex gap-3 mt-4">
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
             <select 
               value={category} 
               onChange={(e) => setCategory(e.target.value)}
@@ -195,26 +190,26 @@ export default function Home() {
               <option value="study">📚 学习类</option>
             </select>
             
-            <button
+            <button 
               type="button"
               onClick={handleSubmit}
               disabled={isLoading || !content.trim()}
-              className="flex-1 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              {isLoading ? '提交中...' : '发布不爽'}
+              {isLoading ? '发布中...' : '发布不爽'}
             </button>
           </div>
         </div>
 
-        {/* ⭐ 新增：分类筛选Tab */}
+        {/* 分类筛选Tab */}
         <div className="mb-6">
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {categories.map(cat => (
               <button
                 type="button"
                 key={cat.value}
                 onClick={() => setActiveFilter(cat.value as Category)}
-                className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all font-medium ${
                   activeFilter === cat.value
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'bg-white text-gray-700 hover:bg-gray-100'
@@ -222,7 +217,7 @@ export default function Home() {
               >
                 {cat.label}
                 {activeFilter === cat.value && (
-                  <span className="ml-2 text-xs">
+                  <span className="ml-2 text-xs opacity-90">
                     ({filteredAnnoyances.length})
                   </span>
                 )}
@@ -231,63 +226,38 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 列表 - 使用筛选后的数据 */}
-        <div className="space-y-4">
-          {filteredAnnoyances.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              {activeFilter === 'all' 
-                ? '还没有人发布不爽，来做第一个吧！'
-                : `暂时没有「${getCategoryLabel(activeFilter)}」的不爽`
+        {/* 列表区域 */}
+        <div>
+          {isFirstLoading ? (
+            // ← 首次加载：显示骨架屏
+            <LoadingSkeleton count={3} />
+          ) : filteredAnnoyances.length === 0 ? (
+            // ← 没有数据：显示空状态
+            <EmptyState
+              icon={activeFilter === 'all' ? '📭' : '🔍'}
+              title={
+                activeFilter === 'all' 
+                  ? '还没有人发布不爽' 
+                  : `暂时没有「${categories.find(c => c.value === activeFilter)?.label}」的不爽`
               }
-            </div>
+              description={activeFilter === 'all' ? '来做第一个吧！' : '试试其他分类'}
+            />
           ) : (
-            filteredAnnoyances.map(item => {
-              const isUpvoted = myUpvotes.has(item.id)
-              const isUpvoting = upvoting === item.id
-
-              return (
-                <div 
+            // ← 有数据：显示列表
+            <div className="space-y-4">
+              {filteredAnnoyances.map(item => (
+                <AnnoyanceCard
                   key={item.id}
-                  className="bg-white rounded-lg shadow-md p-5 hover:shadow-lg transition-shadow"
-                >
-                  <p className="text-gray-800 mb-3">{item.content}</p>
-                  
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="px-3 py-1 bg-gray-100 rounded-full text-gray-600">
-                      {getCategoryLabel(item.category)}
-                    </span>
-                    
-                    <button 
-                      type="button"
-                      onClick={() => handleUpvote(item.id)}
-                      disabled={isUpvoted || isUpvoting}
-                      className={`px-4 py-1 rounded-full transition-all ${
-                        isUpvoted 
-                          ? 'bg-red-600 text-white cursor-default' 
-                          : 'bg-red-50 text-red-600 hover:bg-red-100'
-                      } ${isUpvoting ? 'opacity-50' : ''}`}
-                    >
-                      {isUpvoted ? '✓ 已不爽' : '😤 我也不爽'} {item.upvote_count}
-                    </button>
-                  </div>
-                </div>
-              )
-            })
+                  annoyance={item}
+                  isUpvoted={myUpvotes.has(item.id)}
+                  isUpvoting={upvoting === item.id}
+                  onUpvote={handleUpvote}
+                />
+              ))}
+            </div>
           )}
         </div>
       </div>
     </div>
   )
-}
-
-// 辅助函数：获取分类标签
-function getCategoryLabel(category: string): string {
-  const labels: Record<string, string> = {
-    all: '全部',
-    tool: '🔧 工具类',
-    life: '🏠 生活类',
-    work: '💼 工作类',
-    study: '📚 学习类'
-  }
-  return labels[category] || category
 }

@@ -12,7 +12,7 @@ interface LoadingSkeletonProps {
       <div className="space-y-4">
         {Array.from({ length: count }).map((_, index) => (
           <div
-            key={index}
+            key={`skeleton-${index + 1}`}
             className="bg-white rounded-lg shadow-md p-5 animate-pulse"
           >
             {/* 内容区域 - 模拟3行文字 */}
